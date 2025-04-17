@@ -9,11 +9,11 @@ class ACS1:
     def __init__(self):
         # Check if ACS1 variables are cached
         if not os.path.isdir('./data/acs1.parquet'):
-            self.vars_df = load_acs1_vars()
+            self.vars_df = self.load_acs1_vars()
         
         # Check if ACS1 tables are cached
         if not os.path.isdir('./data/acs1_groups.parquet'):
-            self.groups_df = load_acs1_groups()
+            self.groups_df = self.load_acs1_groups()
 
         # Load ACS1 variables and tables
         self.vars_df = pd.read_parquet('./data/acs1.parquet')
@@ -21,7 +21,7 @@ class ACS1:
 
 
     # Loads ACS1 variable metadata from Census API and saves it to a Parquet file
-    def load_acs1_vars():
+    def load_acs1_vars(self):
         # Initialize ACS1 variable DataFrame
         vars_df = pd.DataFrame(columns=['code', 'concept', 'label', 'year'])
 
@@ -80,7 +80,7 @@ class ACS1:
 
 
     # Loads ACS1 table metadata from Census API and saves it to a Parquet file
-    def load_acs1_groups():
+    def load_acs1_groups(self):
         # Initialize ACS1 groups DataFrame
         groups_df = pd.DataFrame(columns=['gcode', 'description'])
 
