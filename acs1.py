@@ -4,20 +4,31 @@ import pandas as pd
 from datetime import timedelta
 from rapidfuzz import process, fuzz
 from census import Census
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class ACS1:
     def __init__(self):
+        project_root = os.path.dirname(os.path.abspath(__file__))
+        data_dir = os.path.join(project_root, 'data')
+        os.makedirs(data_dir, exist_ok=True)
+
         # Check if ACS1 variables are cached
-        if not os.path.isdir('./data/acs1.parquet'):
+        if not os.path.exists(os.path.join(data_dir, 'acs1_vars.parquet')):
             self.vars_df = self.load_acs1_vars()
         
         # Check if ACS1 tables are cached
-        if not os.path.isdir('./data/acs1_groups.parquet'):
+        if not os.path.exists(os.path.join(data_dir, 'acs1_groups.parquet')):
             self.groups_df = self.load_acs1_groups()
 
         # Load ACS1 variables and tables
-        self.vars_df = pd.read_parquet('./data/acs1.parquet')
-        self.groups_df = pd.read_parquet('./data/acs1_groups.parquet')
+        project_root = os.path.dirname(os.path.abspath(__file__))
+        data_dir = os.path.join(project_root, 'data')
+        os.makedirs(data_dir, exist_ok=True)
+        self.vars_df = pd.read_parquet(os.path.join(data_dir, 'acs1_vars.parquet'))
+        self.groups_df = pd.read_parquet(os.path.join(data_dir, 'acs1_groups.parquet'))
+        self.c = Census(os.getenv('CENSUS_KEY'))
 
 
     # Loads ACS1 variable metadata from Census API and saves it to a Parquet file
@@ -76,7 +87,11 @@ class ACS1:
         print(f'Flattening ACS1 vars for {year} - {str(elapsed)}')
 
         # Save ACS1 variable metadata to Parquet file
-        vars_df.to_parquet('./data/acs1.parquet')
+        project_root = os.path.dirname(os.path.abspath(__file__))
+        data_dir = os.path.join(project_root, 'data')
+        os.makedirs(data_dir, exist_ok=True)
+
+        vars_df.to_parquet(os.path.join(data_dir, 'acs1_vars.parquet'))
 
 
     # Loads ACS1 table metadata from Census API and saves it to a Parquet file
@@ -115,7 +130,11 @@ class ACS1:
         groups_df = groups_df.drop_duplicates('gcode')[['gcode','description']]
 
         # Save ACS1 table metadata to Parquet file
-        groups_df.to_parquet('./data/acs1_groups.parquet')
+        project_root = os.path.dirname(os.path.abspath(__file__))
+        data_dir = os.path.join(project_root, 'data')
+        os.makedirs(data_dir, exist_ok=True)
+
+        groups_df.to_parquet(os.path.join(data_dir, 'acs1_groups.parquet'))
 
 
 
