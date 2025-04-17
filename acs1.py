@@ -22,12 +22,17 @@ class ACS1:
         if not os.path.exists(os.path.join(data_dir, 'acs1_groups.parquet')):
             self.groups_df = self.load_acs1_groups()
 
+        # Check if FipsMapping is cached
+        if not os.path.exists(os.path.join(data_dir, 'fips_mapping.csv')):
+            self.fips_mapping = self.load_fips_mapping()
+
         # Load ACS1 variables and tables
         project_root = os.path.dirname(os.path.abspath(__file__))
         data_dir = os.path.join(project_root, 'data')
         os.makedirs(data_dir, exist_ok=True)
         self.vars_df = pd.read_parquet(os.path.join(data_dir, 'acs1_vars.parquet'))
         self.groups_df = pd.read_parquet(os.path.join(data_dir, 'acs1_groups.parquet'))
+        self.fips_mapping = pd.read_csv(os.path.join(data_dir, 'fips_mapping.csv'))
         self.c = Census(os.getenv('CENSUS_KEY'))
 
 
@@ -137,4 +142,71 @@ class ACS1:
         groups_df.to_parquet(os.path.join(data_dir, 'acs1_groups.parquet'))
 
 
+    def load_fips_mapping(self):
+        project_root = os.path.dirname(os.path.abspath(__file__))
+        data_dir = os.path.join(project_root, 'data')
+        os.makedirs(data_dir, exist_ok=True)
+        county_fipcodes = pd.read_csv(os.path.join(data_dir, 'county_fips_master.csv'), encoding='cp1252')
 
+        county_names = [
+            "Dane County WI",
+            "Ramsey County MN",
+            "Sangamon County IL",
+            "Marion County IN",
+            "Franklin County OH",
+            "Polk County IA",
+            "Lancaster County NE",
+            "Boulder County CO",
+            "Wake County NC",
+            "Champaign County IL",
+            "Brown County WI",
+            "Milwaukee County WI",
+            "Washtenaw County MI",
+            "Clarke County GA",
+            "Lane County OR",
+            "Rockwall County TX"
+        ]
+
+        fips_mapping = county_fipcodes[county_fipcodes['long_name'].isin(county_names)][['fips', 'long_name']]
+
+        fips_mapping['fips'] = fips_mapping['fips'].astype('str').apply(lambda x: x.zfill(5))
+        fips_mapping.set_index('fips', inplace=True)
+        fips_mapping['state_fips'] = fips_mapping.index.map(lambda x: x[:2])
+        fips_mapping['county_fips'] = fips_mapping.index.map(lambda x: x[2:])
+
+        fips_mapping.to_csv(os.path.join(data_dir, 'fips_mapping.csv'))
+
+
+    def scrape_vars(self, codes):
+        year_map = {}
+        for code in codes:
+            years = self.vars_df.loc[code, 'years']
+            for year in years:
+                if year not in year_map:
+                    year_map[year] = []
+            year_map[year].append(code)
+
+        output_df = pd.DataFrame(columns = ['NAME', 'year'])
+        output_df.set_index(['NAME', 'year'], inplace=True)
+
+        for year in year_map.keys():
+            start = time.time()
+            data = []
+
+            print('pulling data')
+            for state_fip, county_fip in zip(self.fips_mapping['state_fips'], self.fips_mapping['county_fips']):
+                data.append(self.c.acs1.state_county(['NAME'] + codes, state_fip, county_fip, year=year))
+
+            flat_data = [entry[0] for entry in data if entry]
+            year_df = pd.DataFrame(flat_data)
+            year_df['year'] = year
+            year_df.set_index(['NAME', 'year'], inplace=True)
+            year_df.drop(columns=['state', 'county'], inplace=True)
+
+            output_df = pd.concat([output_df, year_df], axis=0, sort=True)
+
+            end = time.time()
+            elapsed = timedelta(seconds=end - start)
+            print(f'Year: {year} - {str(elapsed)}')
+
+        return output_df

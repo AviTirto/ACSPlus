@@ -3,7 +3,7 @@ from acs1 import ACS1
 
 def update_selected(index):
     checkbox_key = f"var_checkbox_{index}"
-    # Check the state of the checkbox directly in session_state
+
     if st.session_state.get(checkbox_key):
         if index not in st.session_state.selected_vars:
             st.session_state.selected_vars.append(index)
@@ -21,6 +21,7 @@ if not selected:
     st.warning("No group code selected. Please return to the main page.")
     if st.button("⬅️ Back to Main Page"):
         st.session_state.pop("selected_gcode", None)
+        st.session_state.pop("selected_vars", None)
         st.switch_page("table_page.py")
 else:
     if "selected_vars" not in st.session_state:
@@ -64,5 +65,6 @@ else:
             st.markdown("---")
         
     if st.button("Generate"):
-        st.write(st.session_state.selected_vars)
+        results = a.scrape_vars(st.session_state.selected_vars)
+        st.dataframe(results)
 
