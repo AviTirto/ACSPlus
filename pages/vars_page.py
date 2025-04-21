@@ -3,15 +3,6 @@ from acs1 import ACS1
 from st_aggrid import AgGrid, GridOptionsBuilder, JsCode, GridUpdateMode
 import pandas as pd
 
-def update_selected(index):
-    checkbox_key = f"var_checkbox_{index}"
-    if st.session_state.get(checkbox_key):
-        if index not in st.session_state.selected_vars:
-            st.session_state.selected_vars.append(index)
-    else:
-        if index in st.session_state.selected_vars:
-            st.session_state.selected_vars.remove(index)
-
 st.set_page_config(layout='wide')
 
 st.title("Variables for Group Code")
@@ -78,10 +69,6 @@ else:
         rowSelection="multiple",
         groupSelectsChildren=True
     )
-    
-    # # Now override flex values per column
-    # gb.configure_column("concept", flex=1)
-    # gb.configure_column("code", flex=3)
 
     # Hide the raw orgHierarchy column
     gb.configure_column("orgHierarchy", hide=True)
@@ -105,6 +92,7 @@ else:
     if st.button("Generate"):
         if len(selected_rows) > 0:
             st.subheader("Selected Rows:")
-            st.dataframe(pd.DataFrame(selected_rows))
+            output_df = a.scrape_vars(list(selected_rows['code']))
+            st.dataframe(output_df)
         else:
             st.info("No rows selected.")
