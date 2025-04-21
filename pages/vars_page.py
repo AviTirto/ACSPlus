@@ -1,9 +1,10 @@
 import streamlit as st
 from acs1 import ACS1
+from st_aggrid import AgGrid, GridOptionsBuilder, JsCode, GridUpdateMode
+import pandas as pd
 
 def update_selected(index):
     checkbox_key = f"var_checkbox_{index}"
-
     if st.session_state.get(checkbox_key):
         if index not in st.session_state.selected_vars:
             st.session_state.selected_vars.append(index)
@@ -38,33 +39,72 @@ else:
         st.switch_page("table_page.py")
 
     vars_df = a.vars_df[a.vars_df['group'] == selected]
+    vars_df.loc[:, 'orgHierarchy'] = vars_df['label'].str.replace('!!', '/')
+    vars_df.reset_index(inplace=True)
+    vars_df = vars_df[['orgHierarchy', 'code', 'concept']]
 
-    header1, header2, header3, header4 = st.columns([1, 4, 4, 1])
-    header1.markdown("**Code**")
-    header2.markdown("**Concept**")
-    header3.markdown("**Label**")
-    header4.markdown("")
+    # Build Grid Options
+    gb = GridOptionsBuilder.from_dataframe(vars_df)
 
-    with st.container(height=500):
-        for index, row in vars_df.iterrows():
-            col1, col2, col3, col4 = st.columns([1, 4, 4, 1])
-            col1.markdown(f"**{index}**")
-            col2.markdown(row['concept'])
-            col3.markdown(row['label'])
-            checkbox_key = f"var_checkbox_{index}"
-            with col4:
-                # Use the current checkbox value in session_state and connect the on_change
-                st.checkbox(
-                    "",
-                    key=checkbox_key,
-                    value=index in st.session_state.selected_vars,
-                    on_change=update_selected,
-                    args=(index,)
-                )
+    gb.configure_default_column(
+        wrapText=True,
+        autoHeight=True
+    )
 
-            st.markdown("---")
-        
+    # Define the tree column with word wrap
+    autoGroupColumnDef = {
+        "headerName": "Organisation Hierarchy",
+        "cellRendererParams": {
+            "suppressCount": True,
+            "checkbox": True
+        },
+        "maxWidth": 350,
+        "field": "orgHierarchy",
+        "wrapText": True,
+        "autoHeight": True,
+        "cellStyle": {
+            "whiteSpace": "normal",
+            "lineHeight": "1.2"
+        }
+    }
+
+    # Enable tree data
+    gb.configure_grid_options(
+        treeData=True,
+        animateRows=True,
+        groupDefaultExpanded=-1,
+        getDataPath=JsCode("""function(data) { return data.orgHierarchy.split("/"); }"""),
+        autoGroupColumnDef=autoGroupColumnDef,
+        rowSelection="multiple",
+        groupSelectsChildren=True
+    )
+    
+    # # Now override flex values per column
+    # gb.configure_column("concept", flex=1)
+    # gb.configure_column("code", flex=3)
+
+    # Hide the raw orgHierarchy column
+    gb.configure_column("orgHierarchy", hide=True)
+
+    # Final gridOptions
+    gridOptions = gb.build()
+
+    # Render the AgGrid
+    response = AgGrid(
+        vars_df,
+        gridOptions=gridOptions,
+        allow_unsafe_jscode=True,
+        enable_enterprise_modules=True,
+        update_mode=GridUpdateMode.SELECTION_CHANGED,
+        height=600,
+        theme="streamlit",
+    )
+
+    selected_rows = response['selected_rows']
+
     if st.button("Generate"):
-        results = a.scrape_vars(st.session_state.selected_vars)
-        st.dataframe(results)
-
+        if len(selected_rows) > 0:
+            st.subheader("Selected Rows:")
+            st.dataframe(pd.DataFrame(selected_rows))
+        else:
+            st.info("No rows selected.")
