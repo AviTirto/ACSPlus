@@ -29,6 +29,7 @@ with st.container(height=500):
             with col3:
                 if st.button("Open", key=f"button_{index}_{row['gcode']}"):
                     st.session_state["selected_gcode"] = row['gcode']
+                    st.session_state['source'] = row['source']
                     st.switch_page("pages/vars_page.py")
 
     else:
@@ -39,6 +40,7 @@ with st.container(height=500):
             with col3:
                 if st.button("Open", key=f"button_{index}_{row['gcode']}"):
                     st.session_state["selected_gcode"] = row['gcode']
+                    st.session_state['source'] = row['source']
                     st.switch_page("pages/vars_page.py")
 
         st.markdown("---")

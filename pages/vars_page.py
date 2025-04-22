@@ -16,6 +16,7 @@ st.set_page_config(layout='wide')
 st.title("Variables for Group Code")
 
 selected = st.session_state.get("selected_gcode")
+source = st.session_state.get('source')
 
 if not selected:
     st.warning("No group code selected. Please return to the main page.")
@@ -65,6 +66,6 @@ else:
             st.markdown("---")
         
     if st.button("Generate"):
-        results = a.scrape_vars(st.session_state.selected_vars)
+        results = a.scrape_vars(st.session_state.selected_vars, st.session_state.source)
         st.dataframe(results)
 
