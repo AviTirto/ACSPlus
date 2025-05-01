@@ -91,7 +91,7 @@ else:
 
     if st.button("Generate"):
         if len(selected_rows) > 0:
-            st.subheader("Selected Rows:")
+            st.subheader("Output DataFrame:")
             output_df = a.scrape_vars(list(selected_rows['code']))
             st.dataframe(output_df)
         else:
